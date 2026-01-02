@@ -43,7 +43,7 @@ class BidService {
   /// Get all bids for a specific waste post
   Future<List<BidModel>> getBidsForWastePost(String wastePostId) async {
     try {
-      final allBids = await _db.getBidsByWastePost(wastePostId);
+      final allBids = await _db.getBidsByWasteId(wastePostId);
       return allBids.where((bid) => bid.status == 'active').toList()
         ..sort((a, b) => b.bidAmount.compareTo(a.bidAmount));
     } catch (e) {
@@ -54,7 +54,7 @@ class BidService {
   /// Get all bids for a specific waste post (including rejected/accepted)
   Future<List<BidModel>> getAllBidsForWastePost(String wastePostId) async {
     try {
-      final bids = await _db.getBidsByWastePost(wastePostId);
+      final bids = await _db.getBidsByWasteId(wastePostId);
       return bids..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
       throw Exception('Error fetching all bids: $e');
@@ -64,7 +64,7 @@ class BidService {
   /// Get all bids placed by a specific processor (bidder)
   Future<List<BidModel>> getBidsByProcessor(String processorId) async {
     try {
-      final bids = await _db.getBidsByManufacturer(processorId);
+      final bids = await _db.getBidsByManufacturerId(processorId);
       return bids..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
       throw Exception('Error fetching processor bids: $e');
@@ -87,7 +87,7 @@ class BidService {
   /// Get active bids (count) for a waste post
   Future<int> getActiveBidCount(String wastePostId) async {
     try {
-      final allBids = await _db.getBidsByWastePost(wastePostId);
+      final allBids = await _db.getBidsByWasteId(wastePostId);
       return allBids.where((bid) => bid.status == 'active').length;
     } catch (e) {
       throw Exception('Error fetching bid count: $e');
@@ -148,7 +148,7 @@ class BidService {
   /// Reject all other bids for a waste post (when one is accepted)
   Future<void> rejectOtherBids(String wastePostId, String acceptedBidId) async {
     try {
-      final allBids = await _db.getBidsByWastePost(wastePostId);
+      final allBids = await _db.getBidsByWasteId(wastePostId);
       for (final bid in allBids) {
         if (bid.id != acceptedBidId && bid.status == 'active') {
           final updatedBid = bid.copyWith(
@@ -212,12 +212,4 @@ class BidService {
     }
   }
 }
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((query) =>
-              query.docs.map((doc) => BidModel.fromJson(doc.data())).toList());
-    } catch (e) {
-      throw Exception('Error streaming processor bids: $e');
-    }
-  }
-}
+
