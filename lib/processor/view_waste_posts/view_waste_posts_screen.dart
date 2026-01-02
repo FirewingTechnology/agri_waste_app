@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/waste_model.dart';
 import '../../services/database_service.dart';
@@ -321,15 +322,18 @@ class _ViewWastePostsScreenState extends State<ViewWastePostsScreen> {
             child: const Text('Close'),
           ),
           ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Implement actual call functionality
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Call feature coming soon'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              final Uri phoneUri = Uri(scheme: 'tel', path: waste.farmerPhone);
+              if (await canLaunchUrl(phoneUri)) {
+                await launchUrl(phoneUri);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Cannot call ${waste.farmerPhone}')),
+                  );
+                }
+              }
             },
             icon: const Icon(Icons.phone),
             label: const Text('Call'),

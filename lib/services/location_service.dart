@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -99,11 +100,43 @@ class LocationService {
   /// Get location address using geocoding
   Future<String> getAddressFromCoordinates(double latitude, double longitude) async {
     try {
-      // This would use geocoding package
-      // For now return coordinates as string
+      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+      
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        
+        // Build readable address
+        List<String> addressParts = [];
+        
+        if (place.street != null && place.street!.isNotEmpty) {
+          addressParts.add(place.street!);
+        }
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          addressParts.add(place.subLocality!);
+        }
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          addressParts.add(place.locality!);
+        }
+        if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+          addressParts.add(place.subAdministrativeArea!);
+        }
+        if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          addressParts.add(place.administrativeArea!);
+        }
+        if (place.postalCode != null && place.postalCode!.isNotEmpty) {
+          addressParts.add(place.postalCode!);
+        }
+        
+        if (addressParts.isNotEmpty) {
+          return addressParts.join(', ');
+        }
+      }
+      
+      // Fallback to coordinates if no address found
       return '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}';
     } catch (e) {
-      return 'Location: $latitude, $longitude';
+      // Return coordinates if geocoding fails
+      return '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}';
     }
   }
 }

@@ -289,8 +289,18 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                   subtitle: 'Browse quality products',
                   color: AppTheme.lightGreen,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Use bottom navigation')),
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Market Insights'),
+                        content: const Text('View current market prices and trends for agricultural waste in your region.\n\nThis feature provides real-time pricing data to help you get the best value for your produce.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

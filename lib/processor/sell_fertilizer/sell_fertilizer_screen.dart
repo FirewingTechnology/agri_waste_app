@@ -29,6 +29,45 @@ class _SellFertilizerScreenState extends State<SellFertilizerScreen> {
   bool _isLoading = false;
   final List<String> _selectedImages = [];
 
+  bool get _hasUnsavedData {
+    return _nameController.text.isNotEmpty ||
+           _quantityController.text.isNotEmpty ||
+           _priceController.text.isNotEmpty ||
+           _locationController.text.isNotEmpty ||
+           _descriptionController.text.isNotEmpty ||
+           _preparationDaysController.text.isNotEmpty ||
+           _selectedImages.isNotEmpty;
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedData) {
+      return true;
+    }
+
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to go back?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -69,7 +108,17 @@ class _SellFertilizerScreenState extends State<SellFertilizerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) async {
+        if (didPop) return;
+        
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Sell Fertilizer'),
         backgroundColor: AppTheme.primaryGreen,
@@ -293,6 +342,7 @@ class _SellFertilizerScreenState extends State<SellFertilizerScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

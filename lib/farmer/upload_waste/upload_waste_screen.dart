@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'dart:io';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/widgets/map_location_picker_screen.dart';
 import '../../models/waste_model.dart';
 import '../../services/database_service.dart';
 import '../../services/local_auth_service.dart';
@@ -34,6 +35,44 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
   final List<File> _selectedImages = [];
   double? _latitude;
   double? _longitude;
+
+  bool get _hasUnsavedData {
+    return _quantityController.text.isNotEmpty ||
+           _priceController.text.isNotEmpty ||
+           _locationController.text.isNotEmpty ||
+           _descriptionController.text.isNotEmpty ||
+           _selectedImages.isNotEmpty ||
+           _latitude != null;
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedData) {
+      return true; // Allow back navigation
+    }
+
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to go back?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
+  }
 
   @override
   void dispose() {
@@ -164,6 +203,33 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
     });
   }
 
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapLocationPickerScreen(
+          initialLatitude: _latitude,
+          initialLongitude: _longitude,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _latitude = result['latitude'] as double;
+        _longitude = result['longitude'] as double;
+        _locationController.text = result['address'] as String;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location selected successfully! 📍'),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+    }
+  }
+
   Future<void> _getCurrentLocation() async {
     setState(() {
       _isGettingLocation = true;
@@ -174,10 +240,16 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
       final position = await locationService.getCurrentLocationWithTimeout();
 
       if (position != null) {
+        // Get readable address from coordinates
+        final address = await locationService.getAddressFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
         setState(() {
           _latitude = position.latitude;
           _longitude = position.longitude;
-          _locationController.text = '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+          _locationController.text = address;
         });
 
         if (mounted) {
@@ -323,13 +395,23 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Upload Waste'),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) async {
+        if (didPop) return;
+        
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Upload Waste'),
+          backgroundColor: AppTheme.primaryGreen,
+          foregroundColor: Colors.white,
+        ),
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -441,11 +523,15 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _locationController,
+                readOnly: true,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.location_on),
-                  hintText: 'Enter your location or use GPS',
-                  suffixIcon: _isGettingLocation
-                      ? const Padding(
+                  hintText: 'Tap to select location',
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isGettingLocation)
+                        const Padding(
                           padding: EdgeInsets.all(12.0),
                           child: SizedBox(
                             height: 20,
@@ -453,15 +539,25 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         )
-                      : IconButton(
+                      else ...[
+                        IconButton(
                           icon: const Icon(Icons.my_location),
                           onPressed: _getCurrentLocation,
-                          tooltip: 'Get current location',
+                          tooltip: 'Use current location',
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.map),
+                          onPressed: _openMapPicker,
+                          tooltip: 'Select on map',
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
+                onTap: _openMapPicker,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter location or use GPS';
+                    return 'Please select location';
                   }
                   return null;
                 },
@@ -625,6 +721,7 @@ class _UploadWasteScreenState extends State<UploadWasteScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
