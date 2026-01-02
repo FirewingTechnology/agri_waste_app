@@ -102,6 +102,7 @@ class FarmerHomeScreen extends StatefulWidget {
 
 class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
   List<WasteModel> _wastePosts = [];
+  bool _isLoading = true;
 
   @override
   void initState() {

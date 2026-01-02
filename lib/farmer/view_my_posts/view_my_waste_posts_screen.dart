@@ -17,6 +17,7 @@ class ViewMyWastePostsScreen extends StatefulWidget {
 
 class _ViewMyWastePostsScreenState extends State<ViewMyWastePostsScreen> {
   List<WasteModel> myWastePosts = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
