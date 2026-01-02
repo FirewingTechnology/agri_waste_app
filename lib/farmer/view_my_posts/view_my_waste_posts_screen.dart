@@ -441,15 +441,66 @@ class _ViewMyWastePostsScreenState extends State<ViewMyWastePostsScreen> {
   }
 
   void _showEditDialog(BuildContext context, WasteModel waste) {
+    final descController = TextEditingController(text: waste.description);
+    final priceController = TextEditingController(
+      text: waste.pricePerKg?.toString() ?? '',
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Post'),
-        content: const Text('Edit functionality coming soon'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Price per kg (Optional)',
+                  border: OutlineInputBorder(),
+                  prefixText: '₹ ',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedWaste = waste.copyWith(
+                description: descController.text,
+                pricePerKg: priceController.text.isNotEmpty
+                    ? double.tryParse(priceController.text)
+                    : null,
+              );
+
+              final db = DatabaseService();
+              await db.updateWastePost(updatedWaste);
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post updated successfully!')),
+                );
+                _loadWastePosts();
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
