@@ -44,28 +44,22 @@ class WasteModel {
     this.isBiddingEnabled = true,
   });
 
-  // Convert to JSON for Firestore
+  // Convert to JSON for Database (SQLite uses snake_case)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'farmerId': farmerId,
-      'farmerName': farmerName,
-      'farmerPhone': farmerPhone,
-      'wasteType': wasteType,
+      'farmer_id': farmerId,
+      'farmer_name': farmerName,
+      'waste_type': wasteType,
       'quantity': quantity,
       'description': description,
       'location': location,
       'latitude': latitude,
       'longitude': longitude,
-      'imageUrls': imageUrls,
-      'pricePerKg': pricePerKg,
+      'image_url': imageUrls.isNotEmpty ? imageUrls.first : null, // Store first image
+      'price_per_kg': pricePerKg,
       'status': status,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-      'processorId': processorId,
-      'soldAt': soldAt?.toIso8601String(),
-      'bidCount': bidCount,
-      'isBiddingEnabled': isBiddingEnabled,
+      'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
 
@@ -73,30 +67,52 @@ class WasteModel {
   factory WasteModel.fromJson(Map<String, dynamic> json) {
     return WasteModel(
       id: json['id'] ?? '',
-      farmerId: json['farmerId'] ?? '',
-      farmerName: json['farmerName'] ?? '',
-      farmerPhone: json['farmerPhone'] ?? '',
-      wasteType: json['wasteType'] ?? '',
+      farmerId: json['farmerId'] ?? json['farmer_id'] ?? '',
+      farmerName: json['farmerName'] ?? json['farmer_name'] ?? '',
+      farmerPhone: json['farmerPhone'] ?? json['farmer_phone'] ?? '',
+      wasteType: json['wasteType'] ?? json['waste_type'] ?? '',
       quantity: (json['quantity'] ?? 0).toDouble(),
       description: json['description'] ?? '',
       location: json['location'] ?? '',
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
-      imageUrls: List<String>.from(json['imageUrls'] ?? []),
-      pricePerKg: json['pricePerKg']?.toDouble(),
+      imageUrls: json['imageUrls'] is String
+          ? (json['imageUrls'] as String).split(',').where((s) => s.isNotEmpty).toList()
+          : List<String>.from(json['imageUrls'] ?? json['image_url'] != null ? [json['image_url']] : []),
+      pricePerKg: json['pricePerKg'] != null 
+          ? (json['pricePerKg'] as num).toDouble()
+          : json['price_per_kg'] != null 
+              ? (json['price_per_kg'] as num).toDouble()
+              : null,
       status: json['status'] ?? 'available',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
-      processorId: json['processorId'],
-      soldAt: json['soldAt'] != null
-          ? DateTime.parse(json['soldAt'])
-          : null,
-      bidCount: json['bidCount'] ?? 0,
-      isBiddingEnabled: json['isBiddingEnabled'] ?? true,
+      createdAt: json['createdAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
+          : (json['created_at'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(json['created_at'])
+              : (json['createdAt'] != null
+                  ? DateTime.parse(json['createdAt'])
+                  : DateTime.now())),
+      updatedAt: json['updatedAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'])
+          : (json['updated_at'] is int && json['updated_at'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(json['updated_at'])
+              : (json['updatedAt'] != null
+                  ? DateTime.parse(json['updatedAt'])
+                  : null)),
+      processorId: json['processorId'] ?? json['processor_id'],
+      soldAt: json['soldAt'] is int && json['soldAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['soldAt'])
+          : (json['sold_at'] is int && json['sold_at'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(json['sold_at'])
+              : (json['soldAt'] != null
+                  ? DateTime.parse(json['soldAt'])
+                  : null)),
+      bidCount: json['bidCount'] ?? json['bid_count'] ?? 0,
+      isBiddingEnabled: json['isBiddingEnabled'] is int
+          ? json['isBiddingEnabled'] == 1
+          : (json['is_bidding_enabled'] is int
+              ? json['is_bidding_enabled'] == 1
+              : (json['isBiddingEnabled'] ?? true)),
     );
   }
 

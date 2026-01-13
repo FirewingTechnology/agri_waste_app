@@ -1,11 +1,11 @@
 // Local Authentication Service - Using SQLite Database
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database_service.dart';
 import '../models/user_model.dart';
 
 class LocalAuthService {
   final DatabaseService _db = DatabaseService();
-  
-  String? _currentUserId;
+  static const String _currentUserIdKey = 'current_user_id';
 
   /// Register a new user
   Future<bool> register({
@@ -19,16 +19,16 @@ class LocalAuthService {
       // Check if email already exists
       final existingUser = await _db.getUserByEmail(email);
       if (existingUser != null) {
-        throw Exception('Email already registered');
+        throw Exception('This email is already registered.\n\nPlease login or use a different email.');
       }
 
       // Validate inputs
       if (email.isEmpty || password.isEmpty || name.isEmpty) {
-        throw Exception('All fields are required');
+        throw Exception('All fields are required.\n\nPlease fill in all the details to continue.');
       }
 
       if (password.length < 6) {
-        throw Exception('Password must be at least 6 characters');
+        throw Exception('Password is too short.\n\nPlease use at least 6 characters for better security.');
       }
 
       // Create user
@@ -48,8 +48,9 @@ class LocalAuthService {
       // Save user
       await _db.insertUser(user);
 
-      // Set as current user
-      _currentUserId = userId;
+      // Set as current user in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_currentUserIdKey, userId);
 
       return true;
     } catch (e) {
@@ -65,28 +66,29 @@ class LocalAuthService {
     try {
       // Validate credentials
       if (email.isEmpty || password.isEmpty) {
-        throw Exception('Email and password required');
+        throw Exception('Please enter both email and password to continue');
       }
 
       // Get stored password
       final storedPassword = await _db.getPassword(email);
       if (storedPassword == null) {
-        throw Exception('User not found');
+        throw Exception('No account found with this email address.\n\nPlease check your email or create a new account.');
       }
 
       // Compare passwords
       if (storedPassword != password) {
-        throw Exception('Invalid password');
+        throw Exception('Incorrect password.\n\nPlease check your password and try again.');
       }
 
       // Get user
       final user = await _db.getUserByEmail(email);
       if (user == null) {
-        throw Exception('User not found');
+        throw Exception('Account data not found.\n\nPlease contact support for assistance.');
       }
 
-      // Set as current user
-      _currentUserId = user.id;
+      // Save current user ID to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_currentUserIdKey, user.id);
 
       return true;
     } catch (e) {
@@ -97,22 +99,30 @@ class LocalAuthService {
   /// Get current user
   Future<UserModel?> getCurrentUser() async {
     try {
-      if (_currentUserId == null) return null;
-      return await _db.getUserById(_currentUserId!);
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString(_currentUserIdKey);
+      if (userId == null) return null;
+      return await _db.getUserById(userId);
     } catch (e) {
       return null;
     }
   }
 
   /// Get current user ID
-  String? getCurrentUserId() {
-    return _currentUserId;
+  Future<String?> getCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_currentUserIdKey);
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Logout
   Future<void> logout() async {
     try {
-      _currentUserId = null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_currentUserIdKey);
     } catch (e) {
       throw Exception('Logout error: $e');
     }

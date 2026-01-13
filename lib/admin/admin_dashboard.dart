@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 
@@ -91,9 +93,30 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, '/login');
+                
+                // Logout using AuthProvider
+                try {
+                  await Provider.of<AuthProvider>(context, listen: false).logout();
+                  
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Logout failed: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,

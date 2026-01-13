@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/localization/app_strings.dart';
 import '../core/localization/language_provider.dart';
+import '../core/providers/auth_provider.dart';
 import '../services/database_service.dart';
 import '../services/local_auth_service.dart';
 import 'upload_waste/upload_waste_screen.dart';
@@ -163,11 +164,35 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
               );
             },
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle),
-            onPressed: () {
-              // TODO: Navigate to profile
+            onSelected: (value) {
+              if (value == 'logout') {
+                _showLogoutDialog(context);
+              }
             },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: AppTheme.primaryGreen),
+                    SizedBox(width: 8),
+                    Text('Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -542,4 +567,53 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Logout dialog helper function
+void _showLogoutDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              try {
+                await Provider.of<AuthProvider>(context, listen: false).logout();
+                
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Logout failed: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
 }

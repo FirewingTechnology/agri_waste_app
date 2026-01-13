@@ -40,11 +40,11 @@ class UserModel {
       'role': role,
       'address': address,
       'location': location,
-      'verified': verified,
+      'verified': verified ? 1 : 0,
       'rating': rating,
-      'ratingCount': ratingCount,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'rating_count': ratingCount,
+      'created_at': createdAt.millisecondsSinceEpoch,
+      'updated_at': updatedAt?.millisecondsSinceEpoch,
     };
   }
 
@@ -58,15 +58,19 @@ class UserModel {
       role: json['role'] ?? 'Farmer',
       address: json['address'],
       location: json['location'],
-      verified: json['verified'] ?? false,
+      verified: (json['verified'] ?? 0) == 1,
       rating: (json['rating'] ?? 0.0).toDouble(),
-      ratingCount: json['ratingCount'] ?? 0,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
+      ratingCount: json['rating_count'] ?? json['ratingCount'] ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['created_at'])
+          : (json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'])
+              : DateTime.now()),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updated_at'])
+          : (json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'])
+              : null),
     );
   }
 

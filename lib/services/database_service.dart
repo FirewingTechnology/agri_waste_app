@@ -26,8 +26,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -45,7 +46,8 @@ class DatabaseService {
         verified INTEGER DEFAULT 0,
         rating REAL DEFAULT 0.0,
         rating_count INTEGER DEFAULT 0,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER
       )
     ''');
 
@@ -116,6 +118,13 @@ class DatabaseService {
         password TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add updated_at column to users table
+      await db.execute('ALTER TABLE users ADD COLUMN updated_at INTEGER');
+    }
   }
 
   // ========== USER OPERATIONS ==========

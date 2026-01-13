@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/constants/app_constants.dart';
 import '../core/localization/app_strings.dart';
 import '../core/localization/language_provider.dart';
+import '../core/providers/auth_provider.dart';
 import 'register_screen.dart';
 
 // Create login UI with email and password fields
@@ -44,32 +44,276 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // TODO: Implement Firebase Authentication
-    // For now, simulate login
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Login using AuthProvider
+      final result = await authProvider.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    // Save login state
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.keyIsLoggedIn, true);
-    await prefs.setString(AppConstants.keyUserRole, _selectedRole);
-    await prefs.setString(AppConstants.keyUserId, 'user_${DateTime.now().millisecondsSinceEpoch}');
+      setState(() {
+        _isLoading = false;
+      });
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (mounted) {
-      // Navigate based on role
-      String route;
-      if (_selectedRole == AppConstants.farmerRole) {
-        route = '/farmer-dashboard';
-      } else if (_selectedRole == AppConstants.manufacturerRole || _selectedRole == AppConstants.processorRole) {
-        route = '/manufacturer-dashboard';
-      } else {
-        route = '/admin-dashboard';
+      if (mounted) {
+        if (result['success']) {
+          // Get user role from result
+          final userRole = result['user']?.role ?? _selectedRole;
+          
+          // Navigate based on role
+          String route;
+          if (userRole == AppConstants.farmerRole) {
+            route = '/farmer-dashboard';
+          } else if (userRole == AppConstants.manufacturerRole || userRole == AppConstants.processorRole) {
+            route = '/manufacturer-dashboard';
+          } else {
+            route = '/admin-dashboard';
+          }
+          
+          Navigator.pushReplacementNamed(context, route);
+        } else {
+          // Show attractive error dialog
+          _showErrorDialog(
+            title: 'Login Failed',
+            message: result['message'] ?? 'Unable to login. Please try again.',
+            icon: Icons.error_outline,
+          );
+        }
       }
-      Navigator.pushReplacementNamed(context, route);
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        _showErrorDialog(
+          title: 'Oops! Something Went Wrong',
+          message: e.toString().replaceAll('Exception: ', ''),
+          icon: Icons.warning_amber_rounded,
+        );
+      }
     }
+  }
+
+  void _showErrorDialog({
+    required String title,
+    required String message,
+    required IconData icon,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.red.shade50,
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 48,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                
+                // Message
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade700,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                
+                // Action Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Try Again',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showForgotPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            constraints: const BoxConstraints(maxWidth: 340),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.blue.shade50,
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_reset,
+                    size: 36,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Title
+                const Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                
+                // Message
+                Text(
+                  'Don\'t have an account yet?\nRegister now to get started!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _navigateToRegister();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Register',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _navigateToRegister() {
@@ -253,19 +497,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Reset Password'),
-                          content: const Text('Please contact admin to reset your password.\\n\\nEmail: admin@agrichain.com\\nPhone: +91-1234567890'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
+                      _showForgotPasswordDialog();
                     },
                     child: const Text('Forgot Password?'),
                   ),

@@ -397,12 +397,18 @@ class _ViewMyWastePostsScreenState extends State<ViewMyWastePostsScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
         ),
       ],
